@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.name }} | Employee Profile{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ employee.name }}</h1>
+        <p class="page-subtitle">Workforce Member Profile &bull; Code: <code>{{ employee.employee_code }}</code></p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('employees_list') }}" class="btn btn-secondary">
+            &larr; Back to Directory
+        </a>
+        <a href="{{ url_for('employee_edit', emp_id=employee.id) }}" class="btn btn-primary">
+            Edit Profile
+        </a>
+    </div>
+</div>
+
+<div class="profile-grid">
+    <!-- Left Column: Core Info & Stats -->
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="avatar-placeholder">
+                {{ employee.name[:2].upper() }}
+            </div>
+            <h3 style="font-size: 1.2rem; margin-bottom: 0.25rem;">{{ employee.name }}</h3>
+            <span class="role-badge">{{ employee.role }}</span>
+            <div style="margin-top: 0.5rem;">
+                {% if employee.is_active == 1 %}
+                    <span class="status-badge">Active</span>
+                {% else %}
+                    <span class="status-badge inactive">Inactive</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="profile-stats-list">
+            <div class="profile-stat-row">
+                <span class="profile-stat-label">Employee Code</span>
+                <span class="emp-code">{{ employee.employee_code }}</span>
+            </div>
+            <div class="profile-stat-row">
+                <span class="profile-stat-label">Target Weekly Hours</span>
+                <span class="profile-stat-val">{{ employee.target_weekly_hours }} hrs/week</span>
+            </div>
+            <div class="profile-stat-row">
+                <span class="profile-stat-label">Max Allowable Hours</span>
+                <span class="profile-stat-val" style="color: var(--primary);">{{ employee.max_weekly_hours }} hrs/week</span>
+            </div>
+            <div class="profile-stat-row">
+                <span class="profile-stat-label">Email Address</span>
+                <span class="profile-stat-val" style="font-size: 0.8rem; word-break: break-all;">{{ employee.email }}</span>
+            </div>
+            <div class="profile-stat-row">
+                <span class="profile-stat-label">Phone</span>
+                <span class="profile-stat-val">{{ employee.phone or 'Not provided' }}</span>
+            </div>
+            <div class="profile-stat-row">
+                <span class="profile-stat-label">Created At</span>
+                <span class="profile-stat-val" style="font-size: 0.8rem;">{{ employee.created_at }}</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <form action="{{ url_for('employee_toggle_status', emp_id=employee.id) }}" method="POST">
+                <button type="submit" class="btn btn-outline" style="width: 100%;">
+                    {{ 'Pause Scheduling (Deactivate)' if employee.is_active else 'Resume Scheduling (Activate)' }}
+                </button>
+            </form>
+            <form action="{{ url_for('employee_delete', emp_id=employee.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this employee?');">
+                <button type="submit" class="btn btn-danger" style="width: 100%;">
+                    Delete Employee
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Column: Skills & Availability Schedule -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Skills Card -->
+        <section class="card" style="margin-bottom: 0;">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <span style="font-size: 1.3rem;">🎯</span>
+                    <div>
+                        <h2 class="card-title">Assigned Skills & Proficiencies</h2>
+                        <p class="card-subtitle">Required for qualified shift assignment</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if skills %}
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem;">
+                        {% for skill in skills %}
+                            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.85rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                    <strong style="font-size: 0.92rem;">{{ skill.name }}</strong>
+                                    <span class="skill-pill {% if skill.proficiency_level == 'Expert' %}expert{% endif %}">
+                                        {{ skill.proficiency_level }}
+                                    </span>
+                                </div>
+                                <p style="font-size: 0.78rem; color: var(--text-muted);">{{ skill.description }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: var(--text-muted); font-size: 0.88rem;">No skills currently assigned to this employee.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Availability Card -->
+        <section class="card" style="margin-bottom: 0;">
+            <div class="card-header">
+                <div class="card-header-left">
+                    <span style="font-size: 1.3rem;">📅</span>
+                    <div>
+                        <h2 class="card-title">Weekly Recurring Availability Schedule</h2>
+                        <p class="card-subtitle">Enforced during automatic schedule generation</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="availability-table">
+                        <thead>
+                            <tr>
+                                <th>Day of Week</th>
+                                <th style="text-align: center;">Availability</th>
+                                <th>Time Interval Window</th>
+                                <th>Total Available Window</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                            {% for day_idx in range(7) %}
+                                {% set rule = availability_map.get(day_idx) %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ day_names[day_idx] }}</strong>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        {% if rule and rule.is_available == 1 %}
+                                            <span class="status-badge" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;">
+                                                Available
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge inactive" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;">
+                                                Unavailable
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rule and rule.is_available == 1 %}
+                                            <code>{{ rule.start_time }} &ndash; {{ rule.end_time }}</code>
+                                        {% else %}
+                                            <span style="color: var(--text-muted); font-size: 0.85rem;">Not available for shifts</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-size: 0.85rem;">
+                                        {% if rule and rule.is_available == 1 %}
+                                            <span>Configured</span>
+                                        {% else %}
+                                            <span style="color: var(--text-muted);">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

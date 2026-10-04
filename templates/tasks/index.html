@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks & Shifts | Workforce Scheduler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Tasks & Shift Demand Catalog</h1>
+        <p class="page-subtitle">Configure operational tasks across Morning, Afternoon, and Night shifts with required skills, duration, and staffing headcount.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('bulk_entry_page') }}" class="btn btn-secondary">
+            ⚡ Bulk Entry / Presets
+        </a>
+        <a href="{{ url_for('task_new') }}" class="btn btn-primary">
+            + Add New Task
+        </a>
+    </div>
+</div>
+
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-left">
+            <span style="font-size: 1.3rem;">📋</span>
+            <div>
+                <h2 class="card-title">Configured Tasks & Shifts</h2>
+                <p class="card-subtitle">Showing {{ tasks|length }} shift definitions</p>
+            </div>
+        </div>
+        <div>
+            <a href="{{ url_for('scheduler_dashboard') }}" class="btn btn-sm btn-primary">
+                Go to Scheduler &rarr;
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if tasks %}
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Task Title</th>
+                            <th>Shift Type</th>
+                            <th>Day of Week</th>
+                            <th>Time Window</th>
+                            <th>Duration</th>
+                            <th>Required Skill</th>
+                            <th>Staff Needed</th>
+                            <th>Priority</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                        {% for t in tasks %}
+                            <tr>
+                                <td>
+                                    <span class="emp-code">{{ t.task_code or ('TSK-' ~ t.id) }}</span>
+                                </td>
+                                <td>
+                                    <strong style="color: var(--text-dark);">{{ t.title }}</strong>
+                                </td>
+                                <td>
+                                    {% if t.shift_type == 'Morning' %}
+                                        <span class="status-badge" style="background: #fef3c7; color: #b45309; border-color: #fde68a; font-size: 0.75rem; padding: 0.15rem 0.5rem;">
+                                            🌅 Morning
+                                        </span>
+                                    {% elif t.shift_type == 'Afternoon' %}
+                                        <span class="status-badge" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-size: 0.75rem; padding: 0.15rem 0.5rem;">
+                                            ☀️ Afternoon
+                                        </span>
+                                    {% elif t.shift_type == 'Night' %}
+                                        <span class="status-badge" style="background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; font-size: 0.75rem; padding: 0.15rem 0.5rem;">
+                                            🌙 Night
+                                        </span>
+                                    {% else %}
+                                        <span class="role-badge" style="font-size: 0.75rem;">{{ t.shift_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ day_names[t.day_of_week] }}</strong>
+                                </td>
+                                <td>
+                                    <code>{{ t.start_time }} &ndash; {{ t.end_time }}</code>
+                                </td>
+                                <td>
+                                    <strong>{{ t.duration_hours }}h</strong>
+                                </td>
+                                <td>
+                                    {% if t.required_skill_name %}
+                                        <span class="skill-pill">{{ t.required_skill_name }}</span>
+                                    {% else %}
+                                        <span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">None Required</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; color: var(--primary);">{{ t.min_staff }} staff</span>
+                                </td>
+                                <td>
+                                    {% if t.priority == 3 %}
+                                        <span class="status-badge" style="background: var(--danger-bg); color: var(--danger); border-color: #fecaca; font-size: 0.75rem; padding: 0.15rem 0.5rem;">
+                                            Critical (P3)
+                                        </span>
+                                    {% elif t.priority == 2 %}
+                                        <span class="status-badge" style="background: #fef3c7; color: #b45309; border-color: #fde68a; font-size: 0.75rem; padding: 0.15rem 0.5rem;">
+                                            High (P2)
+                                        </span>
+                                    {% else %}
+                                        <span class="role-badge" style="font-size: 0.75rem;">Normal (P1)</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    <div class="table-actions" style="justify-content: flex-end;">
+                                        <a href="{{ url_for('task_edit', task_id=t.id) }}" class="btn btn-sm btn-outline">
+                                            Edit
+                                        </a>
+                                        <form action="{{ url_for('task_delete', task_id=t.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete task {{ t.title }}?');">
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem 1rem;">
+                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1.25rem;">No tasks defined yet.</p>
+                <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <a href="{{ url_for('task_new') }}" class="btn btn-primary">+ Add First Task</a>
+                    <a href="{{ url_for('bulk_entry_page') }}" class="btn btn-secondary">⚡ Load Standard Tasks Preset</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Employee' if employee else 'Add New Employee' }} | Workforce Scheduler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'Edit Employee Profile' if employee else 'Add New Employee' }}</h1>
+        <p class="page-subtitle">Configure personal details, maximum working hours, qualified skills, and weekly availability rules.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('employees_list') }}" class="btn btn-secondary">
+            &larr; Back to Employees
+        </a>
+    </div>
+</div>
+
+<form action="{{ url_for('employee_edit', emp_id=employee.id) if employee else url_for('employee_new') }}" method="POST">
+    <!-- Section 1: Basic Information -->
+    <section class="card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <span style="font-size: 1.3rem;">👤</span>
+                <div>
+                    <h2 class="card-title">Personal & Contract Details</h2>
+                    <p class="card-subtitle">Identification, role designation, and weekly hours targets</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="employee_code" class="form-label required">Employee Code</label>
+                    <input 
+                        type="text" 
+                        id="employee_code" 
+                        name="employee_code" 
+                        class="form-control" 
+                        placeholder="e.g. EMP-105" 
+                        value="{{ employee.employee_code if employee else default_code }}" 
+                        required
+                    >
+                    <span class="form-help">Unique identifier for schedule rosters</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="name" class="form-label required">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        class="form-control" 
+                        placeholder="e.g. Jane Doe" 
+                        value="{{ employee.name if employee else '' }}" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label required">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-control" 
+                        placeholder="e.g. jane.doe@company.com" 
+                        value="{{ employee.email if employee else '' }}" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input 
+                        type="text" 
+                        id="phone" 
+                        name="phone" 
+                        class="form-control" 
+                        placeholder="e.g. 555-0199" 
+                        value="{{ employee.phone if employee else '' }}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="role" class="form-label required">Role Designation</label>
+                    <select id="role" name="role" class="form-control" required>
+                        {% for r in available_roles %}
+                            <option value="{{ r }}" {% if employee and employee.role == r %}selected{% endif %}>
+                                {{ r }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="max_weekly_hours" class="form-label required">Max Weekly Hours</label>
+                    <input 
+                        type="number" 
+                        id="max_weekly_hours" 
+                        name="max_weekly_hours" 
+                        class="form-control" 
+                        step="0.5" 
+                        min="1" 
+                        max="80" 
+                        value="{{ employee.max_weekly_hours if employee else 40.0 }}" 
+                        required
+                    >
+                    <span class="form-help">Hard upper constraint limit per week</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="target_weekly_hours" class="form-label required">Target Weekly Hours</label>
+                    <input 
+                        type="number" 
+                        id="target_weekly_hours" 
+                        name="target_weekly_hours" 
+                        class="form-control" 
+                        step="0.5" 
+                        min="1" 
+                        max="80" 
+                        value="{{ employee.target_weekly_hours if employee else 35.0 }}" 
+                        required
+                    >
+                    <span class="form-help">Optimized workload goal for fair distribution</span>
+                </div>
+
+                <div class="form-group" style="justify-content: center;">
+                    <label class="form-label">Active Status</label>
+                    <div style="margin-top: 0.35rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input 
+                                type="checkbox" 
+                                name="is_active" 
+                                value="1" 
+                                {% if not employee or employee.is_active == 1 %}checked{% endif %}
+                                style="width: 18px; height: 18px;"
+                            >
+                            <span>Eligible for automatic shift scheduling</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2: Skills & Qualifications -->
+    <section class="card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <span style="font-size: 1.3rem;">🎯</span>
+                <div>
+                    <h2 class="card-title">Skills & Qualifications</h2>
+                    <p class="card-subtitle">Select qualified skills required to fill specialized shifts</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                Select all competencies this employee is qualified to perform and set their proficiency level:
+            </p>
+            <div class="skills-selector-grid">
+                {% for skill in all_skills %}
+                    {% set is_selected = skill.id in selected_skill_ids %}
+                    {% set prof_level = skill_proficiencies.get(skill.id, 'Standard') %}
+                    <div class="skill-select-card">
+                        <label class="skill-check-label">
+                            <input 
+                                type="checkbox" 
+                                name="skills" 
+                                value="{{ skill.id }}" 
+                                {% if is_selected %}checked{% endif %}
+                            >
+                            <span>
+                                <strong>{{ skill.name }}</strong>
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">{{ skill.description }}</span>
+                            </span>
+                        </label>
+                        <div>
+                            <select name="proficiency_{{ skill.id }}" class="proficiency-select">
+                                <option value="Beginner" {% if prof_level == 'Beginner' %}selected{% endif %}>Beginner</option>
+                                <option value="Standard" {% if prof_level == 'Standard' %}selected{% endif %}>Standard</option>
+                                <option value="Advanced" {% if prof_level == 'Advanced' %}selected{% endif %}>Advanced</option>
+                                <option value="Expert" {% if prof_level == 'Expert' %}selected{% endif %}>Expert</option>
+                            </select>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Weekly Availability Rules -->
+    <section class="card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <span style="font-size: 1.3rem;">📅</span>
+                <div>
+                    <h2 class="card-title">Weekly Availability Window (Mon &ndash; Sun)</h2>
+                    <p class="card-subtitle">Define when this employee can be assigned shifts (Constraint Validation)</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Preset Quick Actions -->
+            <div class="availability-preset-bar">
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Quick Presets:</span>
+                <button type="button" class="btn btn-sm btn-outline" onclick="applyAvailabilityPreset('standard_weekdays')">
+                    Mon&ndash;Fri (08:00 &ndash; 17:00)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="applyAvailabilityPreset('open_all_week')">
+                    Open 24/7 (Mon&ndash;Sun)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="applyAvailabilityPreset('shifts_all_week')">
+                    All Week (07:00 &ndash; 23:00)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="applyAvailabilityPreset('clear_all')">
+                    Clear (All Unavailable)
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="availability-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">Day of Week</th>
+                            <th style="width: 130px; text-align: center;">Availability</th>
+                            <th>Available Start Time</th>
+                            <th>Available End Time</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                        {% for day_idx in range(7) %}
+                            {% set day_rule = availability_map.get(day_idx, {'is_available': 1, 'start_time': '08:00', 'end_time': '17:00'}) %}
+                            <tr>
+                                <td>
+                                    <span class="day-badge">{{ day_names[day_idx] }}</span>
+                                </td>
+                                <td style="text-align: center;">
+                                    <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                        <input 
+                                            type="checkbox" 
+                                            id="avail_check_{{ day_idx }}" 
+                                            name="avail_day_{{ day_idx }}" 
+                                            value="1" 
+                                            {% if day_rule.is_available == 1 %}checked{% endif %}
+                                            onchange="toggleAvailabilityRow({{ day_idx }})"
+                                            style="width: 16px; height: 16px;"
+                                        >
+                                        <span style="font-size: 0.85rem;">Available</span>
+                                    </label>
+                                </td>
+                                <td>
+                                    <input 
+                                        type="time" 
+                                        id="avail_start_{{ day_idx }}" 
+                                        name="avail_start_{{ day_idx }}" 
+                                        class="form-control" 
+                                        style="max-width: 140px;" 
+                                        value="{{ day_rule.start_time }}"
+                                        {% if day_rule.is_available != 1 %}disabled{% endif %}
+                                    >
+                                </td>
+                                <td>
+                                    <input 
+                                        type="time" 
+                                        id="avail_end_{{ day_idx }}" 
+                                        name="avail_end_{{ day_idx }}" 
+                                        class="form-control" 
+                                        style="max-width: 140px;" 
+                                        value="{{ day_rule.end_time }}"
+                                        {% if day_rule.is_available != 1 %}disabled{% endif %}
+                                    >
+                                </td>
+                                <td style="font-size: 0.8rem; color: var(--text-muted);">
+                                    Shifts scheduled on {{ day_names[day_idx] }} will enforce this time interval.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Form Submit / Cancel Bar -->
+    <div class="form-actions">
+        <a href="{{ url_for('employees_list') }}" class="btn btn-secondary">
+            Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+            {{ 'Save Changes' if employee else 'Create Employee' }}
+        </button>
+    </div>
+</form>
+{% endblock %}

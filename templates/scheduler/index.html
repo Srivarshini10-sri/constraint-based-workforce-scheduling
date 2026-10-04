@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Intelligent Scheduler | Workforce Scheduler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Constraint-Based Intelligent Scheduler</h1>
+        <p class="page-subtitle">
+            Powered by Google OR-Tools CP-SAT constraint satisfaction engine. Enforces skill qualifications, availability windows, overlap avoidance, maximum hours, and rest periods with fair workload optimization.
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('bulk_entry_page') }}" class="btn btn-secondary">
+            ⚡ Bulk Entry / Presets
+        </a>
+        <form action="{{ url_for('scheduler_generate') }}" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.4rem; font-size: 0.95rem;">
+                ⚡ Generate Work Assignments
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if schedule_result %}
+    <!-- Solver Feasibility & Status Banner -->
+    <section class="card" style="border: 2px solid {% if schedule_result.is_feasible %}#bbf7d0{% else %}#fed7aa{% endif %};">
+        <div class="card-header" style="background: {% if schedule_result.is_feasible %}var(--success-bg){% else %}var(--warning-bg){% endif %};">
+            <div class="card-header-left">
+                <span style="font-size: 1.5rem;">{% if schedule_result.is_feasible %}✅{% else %}⚠️{% endif %}</span>
+                <div>
+                    <h2 class="card-title" style="color: {% if schedule_result.is_feasible %}var(--success){% else %}#b45309{% endif %};">
+                        Solver Result: {{ schedule_result.status }}
+                    </h2>
+                    <p class="card-subtitle">
+                        {{ schedule_result.solver_engine }} &bull; Solved in {{ schedule_result.solve_time_seconds }}s
+                    </p>
+                </div>
+            </div>
+            <div>
+                {% if schedule_result.schedule_id %}
+                    <a href="{{ url_for('scheduler_export_csv', schedule_id=schedule_result.schedule_id) }}" class="btn btn-sm btn-outline" style="background: #fff;">
+                        📥 Export Schedule (CSV)
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Metric Stats Grid -->
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 1.25rem;">
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Total Demand Slots</div>
+                    <div style="font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem;">{{ schedule_result.total_slots }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Across {{ schedule_result.total_tasks }} tasks</div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Slots Assigned</div>
+                    <div style="font-size: 1.6rem; font-weight: 700; color: var(--success); margin-top: 0.2rem;">{{ schedule_result.assigned_slots }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Matched & scheduled</div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Unassigned Slots</div>
+                    <div style="font-size: 1.6rem; font-weight: 700; color: {% if schedule_result.unassigned_slots > 0 %}var(--danger){% else %}var(--text-muted){% endif %}; margin-top: 0.2rem;">
+                        {{ schedule_result.unassigned_slots }}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Constraint conflicts</div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Fulfillment Rate</div>
+                    <div style="font-size: 1.6rem; font-weight: 700; color: var(--primary); margin-top: 0.2rem;">{{ schedule_result.fulfillment_rate }}%</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Demand satisfied</div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Fairness Balance</div>
+                    <div style="font-size: 1.6rem; font-weight: 700; color: var(--success); margin-top: 0.2rem;">{{ schedule_result.fairness_score }}%</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Workload parity</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Work Assignments Table -->
+    <section class="card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <span style="font-size: 1.3rem;">📋</span>
+                <div>
+                    <h2 class="card-title">Generated Work Assignments</h2>
+                    <p class="card-subtitle">Every task slot mapped to a qualified, available workforce member</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if schedule_result.assignments %}
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Task Code</th>
+                                <th>Task Title</th>
+                                <th>Shift Category</th>
+                                <th>Day & Time Window</th>
+                                <th>Duration</th>
+                                <th>Priority</th>
+                                <th>Assigned Employee</th>
+                                <th>Role</th>
+                                <th>Matched Skill</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                            {% for a in schedule_result.assignments %}
+                                <tr>
+                                    <td>
+                                        <span class="emp-code">{{ a.task_code }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ a.title }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if a.shift_type == 'Morning' %}
+                                            <span class="status-badge" style="background: #fef3c7; color: #b45309; border-color: #fde68a; font-size: 0.75rem;">🌅 Morning</span>
+                                        {% elif a.shift_type == 'Afternoon' %}
+                                            <span class="status-badge" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-size: 0.75rem;">☀️ Afternoon</span>
+                                        {% elif a.shift_type == 'Night' %}
+                                            <span class="status-badge" style="background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; font-size: 0.75rem;">🌙 Night</span>
+                                        {% else %}
+                                            <span class="role-badge" style="font-size: 0.75rem;">{{ a.shift_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ day_names[a.day_of_week] }}</strong>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">{{ a.start_time }} &ndash; {{ a.end_time }}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ a.duration_hours }}h</strong>
+                                    </td>
+                                    <td>
+                                        {% if a.priority == 3 %}
+                                            <span class="status-badge" style="background: var(--danger-bg); color: var(--danger); border-color: #fecaca; font-size: 0.72rem;">Critical</span>
+                                        {% elif a.priority == 2 %}
+                                            <span class="status-badge" style="background: #fef3c7; color: #b45309; border-color: #fde68a; font-size: 0.72rem;">High</span>
+                                        {% else %}
+                                            <span class="role-badge" style="font-size: 0.72rem;">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; flex-direction: column;">
+                                            <a href="{{ url_for('employee_detail', emp_id=a.employee_id) }}" style="font-weight: 600; color: var(--text-dark); text-decoration: none;">
+                                                {{ a.employee_name }}
+                                            </a>
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">{{ a.employee_code }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="role-badge">{{ a.employee_role }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="skill-pill {% if a.proficiency == 'Expert' %}expert{% endif %}" title="Proficiency: {{ a.proficiency }}">
+                                            {{ a.matched_skill }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No assignments generated.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Workload Distribution & Fairness Optimization Table -->
+    <section class="card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <span style="font-size: 1.3rem;">⚖️</span>
+                <div>
+                    <h2 class="card-title">Employee Workload & Night-Shift Distribution</h2>
+                    <p class="card-subtitle">Monitors hour balancing towards target contract hours and night shift equity</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Employee Code</th>
+                            <th>Employee Name</th>
+                            <th>Role</th>
+                            <th>Assigned Hours</th>
+                            <th>Target / Max Limit</th>
+                            <th style="width: 180px;">Workload Utilization</th>
+                            <th>Tasks Assigned</th>
+                            <th>Night Shifts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for w in schedule_result.workload_stats %}
+                            <tr>
+                                <td>
+                                    <span class="emp-code">{{ w.employee_code }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ w.employee_name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="role-badge">{{ w.role }}</span>
+                                </td>
+                                <td>
+                                    <strong style="color: var(--primary); font-size: 1.05rem;">{{ w.assigned_hours }}h</strong>
+                                </td>
+                                <td>
+                                    <div>Target: {{ w.target_hours }}h</div>
+                                    <div style="font-size: 0.78rem; color: var(--text-muted);">Max: {{ w.max_hours }}h</div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                            <div style="width: {{ [w.utilization_percent, 100]|min }}%; height: 100%; background: {% if w.utilization_percent > 90 %}var(--warning){% else %}var(--primary){% endif %};"></div>
+                                        </div>
+                                        <span style="font-size: 0.8rem; font-weight: 600; min-width: 42px;">{{ w.utilization_percent }}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 600;">{{ w.assigned_tasks_count }} shifts</span>
+                                </td>
+                                <td>
+                                    {% if w.night_shifts_count > 0 %}
+                                        <span class="status-badge" style="background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; font-size: 0.75rem; padding: 0.15rem 0.5rem;">
+                                            🌙 {{ w.night_shifts_count }}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">&mdash;</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Unassigned Tasks & Conflict Explanations Panel -->
+    {% if schedule_result.unassigned_tasks %}
+        <section class="card" style="border: 2px solid #fed7aa;">
+            <div class="card-header" style="background: #fff7ed;">
+                <div class="card-header-left">
+                    <span style="font-size: 1.3rem;">⚠️</span>
+                    <div>
+                        <h2 class="card-title" style="color: #c2410c;">Unassigned Tasks & Conflict Root-Cause Explanations</h2>
+                        <p class="card-subtitle">Transparent diagnostics explaining why hard constraints prevented scheduling</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% set day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                    {% for u in schedule_result.unassigned_tasks %}
+                        <div style="background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--danger); border-radius: var(--radius-sm); padding: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                                <div>
+                                    <span class="emp-code" style="margin-right: 0.5rem;">{{ u.task_code }}</span>
+                                    <strong style="font-size: 1rem;">{{ u.title }}</strong>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);">
+                                        &bull; {{ day_names[u.day_of_week] }} ({{ u.start_time }} &ndash; {{ u.end_time }}) &bull; {{ u.duration_hours }}h
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="status-badge" style="background: var(--danger-bg); color: var(--danger); border-color: #fecaca; font-size: 0.75rem;">
+                                        Slot #{{ u.slot_index + 1 }} Unfilled
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.88rem; background: #fef2f2; border-radius: 6px; padding: 0.75rem 1rem; color: #991b1b;">
+                                <strong>Constraint Diagnosis:</strong>
+                                <ul style="margin-top: 0.35rem; padding-left: 1.25rem;">
+                                    {% for r in u.reasons %}
+                                        <li>{{ r }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+{% else %}
+    <!-- Initial Welcome State -->
+    <section class="card" style="text-align: center; padding: 3rem 1.5rem;">
+        <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">⚙️</span>
+        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Ready to Solve Workforce Schedule</h2>
+        <p style="max-width: 650px; margin: 0 auto 1.5rem auto; color: var(--text-muted); font-size: 0.95rem;">
+            Click <strong>"Generate Work Assignments"</strong> to run the Google OR-Tools CP-SAT constraint satisfaction engine.
+            The solver will automatically evaluate employee qualifications, availability windows, overlap avoidance, maximum weekly hours, and minimum rest intervals to find an optimal and fair schedule.
+        </p>
+        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <form action="{{ url_for('scheduler_generate') }}" method="POST">
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.75rem; font-size: 1rem;">
+                    ⚡ Generate Work Assignments Now
+                </button>
+            </form>
+            <a href="{{ url_for('bulk_entry_page') }}" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">
+                Load 5 or 10 Employee Scenarios &rarr;
+            </a>
+        </div>
+    </section>
+{% endif %}
+{% endblock %}

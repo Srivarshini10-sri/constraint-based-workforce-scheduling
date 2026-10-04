@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Roster | Workforce Scheduler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Weekly Roster & Operational Matrix</h1>
+        <p class="page-subtitle">Visual 7-day schedule matrix displaying assignments across Morning, Afternoon, and Night shifts.</p>
+    </div>
+    <div class="page-actions">
+        {% if latest_schedule_id %}
+            <a href="{{ url_for('scheduler_export_csv', schedule_id=latest_schedule_id) }}" class="btn btn-outline">
+                📥 Export CSV
+            </a>
+        {% endif %}
+        <form action="{{ url_for('scheduler_generate') }}" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-primary">
+                ⚡ Re-Generate Schedule
+            </button>
+        </form>
+    </div>
+</div>
+
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-left">
+            <span style="font-size: 1.3rem;">📅</span>
+            <div>
+                <h2 class="card-title">Weekly Shift Schedule Matrix</h2>
+                <p class="card-subtitle">Monday through Sunday operational coverage</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if assignments %}
+            <div class="table-responsive">
+                <table class="availability-table" style="font-size: 0.88rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">Shift Window</th>
+                            <th>Monday</th>
+                            <th>Tuesday</th>
+                            <th>Wednesday</th>
+                            <th>Thursday</th>
+                            <th>Friday</th>
+                            <th>Saturday</th>
+                            <th>Sunday</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set shift_categories = [
+                            ('Morning', '🌅 Morning (08:00 - 16:00)', '#fffbeb', '#b45309'),
+                            ('Afternoon', '☀️ Afternoon (16:00 - 00:00)', '#f0f9ff', '#0369a1'),
+                            ('Night', '🌙 Night (00:00 - 08:00)', '#faf5ff', '#7e22ce')
+                        ] %}
+
+                        {% for cat_key, cat_label, bg_color, text_color in shift_categories %}
+                            <tr>
+                                <td style="background-color: {{ bg_color }}; color: {{ text_color }}; font-weight: 700;">
+                                    {{ cat_label }}
+                                </td>
+                                {% for day_idx in range(7) %}
+                                    <td style="vertical-align: top; min-width: 130px; background-color: #fafbfc;">
+                                        {% set day_cat_assignments = matrix.get((day_idx, cat_key), []) %}
+                                        {% if day_cat_assignments %}
+                                            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                                {% for a in day_cat_assignments %}
+                                                    <div style="background: #fff; border: 1px solid var(--border); border-left: 3px solid {{ text_color }}; border-radius: 4px; padding: 0.4rem 0.5rem; font-size: 0.8rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                                                        <div style="font-weight: 600; color: var(--text-dark);">{{ a.title }}</div>
+                                                        <div style="color: var(--primary); font-weight: 600; font-size: 0.78rem;">
+                                                            👤 {{ a.employee_name }}
+                                                        </div>
+                                                        <div style="font-size: 0.72rem; color: var(--text-muted);">
+                                                            {{ a.start_time }} - {{ a.end_time }} ({{ a.duration_hours }}h)
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <span style="color: #cbd5e1; font-size: 0.8rem;">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem 1rem;">
+                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1rem;">No schedule assignments exist yet.</p>
+                <form action="{{ url_for('scheduler_generate') }}" method="POST">
+                    <button type="submit" class="btn btn-primary">Generate Schedule Now</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

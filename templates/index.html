@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Workforce Scheduling System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Workforce Scheduling & Workload Optimization</h1>
+        <p class="page-subtitle">Constraint-Based Intelligent Workforce Scheduling and Fair Workload Optimization System</p>
+    </div>
+    <div>
+        {% if db_info.status == 'connected' %}
+            <span class="status-badge">
+                <span class="pulse-dot"></span> SQLite Connected (v{{ db_info.sqlite_version }})
+            </span>
+        {% else %}
+            <span class="status-badge" style="background-color: var(--danger-bg); color: var(--danger); border-color: #fecaca;">
+                <span class="pulse-dot" style="background-color: var(--danger);"></span> Database Disconnected
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Database Connectivity & Storage Status Card -->
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-left">
+            <span style="font-size: 1.4rem;">🗄️</span>
+            <div>
+                <h2 class="card-title">Database Connectivity & Storage Status</h2>
+                <p class="card-subtitle">SQLite embedded relational database engine</p>
+            </div>
+        </div>
+        <div>
+            <a href="{{ url_for('employees_list') }}" class="btn btn-sm btn-primary">
+                View Employees ({{ db_info.stats.employees }}) &rarr;
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.25rem;">
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Database Engine</div>
+                <div style="font-size: 1.5rem; font-weight: 700; margin-top: 0.2rem;">SQLite 3</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Version {{ db_info.sqlite_version }}</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Active Tables</div>
+                <div style="font-size: 1.5rem; font-weight: 700; margin-top: 0.2rem;">{{ db_info.table_count }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Schema verified</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Registered Employees</div>
+                <div style="font-size: 1.5rem; font-weight: 700; margin-top: 0.2rem;">{{ db_info.stats.employees }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    <a href="{{ url_for('employees_list') }}" style="color: var(--primary); text-decoration: none;">Manage Employees</a>
+                </div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Shift Definitions</div>
+                <div style="font-size: 1.5rem; font-weight: 700; margin-top: 0.2rem;">{{ db_info.stats.shifts }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Template slots</div>
+            </div>
+        </div>
+
+        <div style="background: #f1f5f9; border-radius: var(--radius-md); padding: 1rem; font-size: 0.88rem;">
+            <div style="display: flex; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <strong style="min-width: 140px; color: var(--text-muted);">Database File:</strong>
+                <code style="background: #e2e8f0; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.82rem;">{{ db_info.database_path }}</code>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                <strong style="min-width: 140px; color: var(--text-muted);">Schema Tables:</strong>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                    {% for tbl in db_info.tables %}
+                        <span style="background: #fff; border: 1px solid var(--border); color: var(--primary); padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-family: ui-monospace, monospace;">{{ tbl }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if db_info.stats.employees == 0 %}
+        <div style="margin-top: 1.25rem; padding: 1rem 1.25rem; background: var(--primary-light); border: 1px dashed #93c5fd; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div>
+                <strong>Database Ready:</strong> Click below to seed demo employees and skills to test database interactions immediately.
+            </div>
+            <form action="{{ url_for('seed_demo_data') }}" method="POST">
+                <button type="submit" class="btn btn-primary">Seed Demo Workforce Data</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Active Constraints Configuration Card -->
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-left">
+            <span style="font-size: 1.4rem;">⚖️</span>
+            <div>
+                <h2 class="card-title">Active Scheduling Constraints</h2>
+                <p class="card-subtitle">Stored and managed in SQLite <code>system_settings</code></p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem;">Minimum Rest Duration</h4>
+                <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
+                    {{ settings.min_rest_hours_between_shifts.value if settings.min_rest_hours_between_shifts else '11.0' }} Hours
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Mandatory rest required between consecutive shifts</p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem;">Max Weekly Working Hours</h4>
+                <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
+                    {{ settings.default_max_weekly_hours.value if settings.default_max_weekly_hours else '40.0' }} Hours
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Standard maximum allowable working hours per employee</p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem;">Max Consecutive Work Days</h4>
+                <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">
+                    {{ settings.max_consecutive_days.value if settings.max_consecutive_days else '6' }} Days
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Prevents employee burnout by enforcing weekly rest days</p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem;">Fair Workload Balancing</h4>
+                <div style="font-size: 1.3rem; font-weight: 700; color: var(--success); margin-bottom: 0.25rem;">
+                    Active
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Variance-minimizing shift allocation across staff</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- System Capability Roadmap -->
+<h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">System Architecture Modules</h3>
+<div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+    <div style="background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+        <span class="status-badge" style="margin-bottom: 0.5rem; font-size: 0.72rem; padding: 0.2rem 0.5rem;">Ready to Use</span>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Employee Management</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Full CRUD operations, role specifications, skill assignment, target/max weekly hours, and 7-day availability windows.
+        </p>
+        <a href="{{ url_for('employees_list') }}" class="btn btn-sm btn-outline">Go to Employees &rarr;</a>
+    </div>
+
+    <div style="background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+        <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); margin-bottom: 0.5rem;">Stage 2</span>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Shift Requirements Catalog</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Manage morning, afternoon, and night shift definitions with skill prerequisites and staffing requirements.
+        </p>
+    </div>
+
+    <div style="background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+        <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); margin-bottom: 0.5rem;">Stage 3</span>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Intelligent Constraint Engine</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Automatic constraint-satisfaction engine resolving overlap avoidance, rest periods, and skill matching.
+        </p>
+    </div>
+
+    <div style="background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+        <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); margin-bottom: 0.5rem;">Stage 3</span>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Fairness & Workload Optimizer</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Equitable shift and night-shift distribution minimizing variance across all qualified employees.
+        </p>
+    </div>
+
+    <div style="background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+        <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); margin-bottom: 0.5rem;">Stage 3</span>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Unfilled Shift Explainer</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Transparent root-cause diagnosis whenever shifts cannot be filled within hard constraints.
+        </p>
+    </div>
+
+    <div style="background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+        <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); margin-bottom: 0.5rem;">Stage 4</span>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Weekly Roster & CSV Export</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Visual weekly matrix, workload analytics, and single-click CSV export for operational management.
+        </p>
+    </div>
+</div>
+{% endblock %}

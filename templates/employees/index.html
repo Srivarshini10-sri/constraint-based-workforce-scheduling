@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Management | Workforce Scheduling System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Employee Directory</h1>
+        <p class="page-subtitle">Manage workforce profiles, roles, contracted weekly hours, skills, and weekly availability.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('employee_new') }}" class="btn btn-primary">
+            <span>+</span> Add New Employee
+        </a>
+    </div>
+</div>
+
+<!-- Employees Directory Card -->
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-left">
+            <span style="font-size: 1.3rem;">👥</span>
+            <div>
+                <h2 class="card-title">All Workforce Members</h2>
+                <p class="card-subtitle">Showing {{ employees|length }} registered employees</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Client-side filter bar -->
+        <div class="filter-bar">
+            <div class="search-group">
+                <input 
+                    type="text" 
+                    id="empSearchInput" 
+                    class="search-input" 
+                    placeholder="Search by name, employee code, or skills..."
+                >
+                <select id="empRoleFilter" class="filter-select">
+                    <option value="">All Roles</option>
+                    {% for role in roles %}
+                        <option value="{{ role }}">{{ role }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        {% if employees %}
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Employee Details</th>
+                            <th>Role</th>
+                            <th>Target / Max Hours</th>
+                            <th>Assigned Skills</th>
+                            <th>Availability</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                            <tr 
+                                class="employee-row"
+                                data-name="{{ emp.name }}"
+                                data-code="{{ emp.employee_code }}"
+                                data-role="{{ emp.role }}"
+                                data-skills="{% for s in emp.skills_list %}{{ s.name }} {% endfor %}"
+                            >
+                                <td>
+                                    <span class="emp-code">{{ emp.employee_code }}</span>
+                                </td>
+                                <td>
+                                    <div class="emp-name-cell">
+                                        <a href="{{ url_for('employee_detail', emp_id=emp.id) }}" class="emp-name" style="text-decoration: none;">
+                                            {{ emp.name }}
+                                        </a>
+                                        <span class="emp-email">{{ emp.email }}{% if emp.phone %} &bull; {{ emp.phone }}{% endif %}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="role-badge">{{ emp.role }}</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ emp.target_weekly_hours }}h</strong> / week
+                                    </div>
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">
+                                        Max: {{ emp.max_weekly_hours }}h
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="skills-pill-container">
+                                        {% if emp.skills_list %}
+                                            {% for s in emp.skills_list %}
+                                                <span class="skill-pill {% if s.proficiency_level == 'Expert' %}expert{% endif %}" title="{{ s.proficiency_level }}">
+                                                    {{ s.name }}
+                                                </span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">No skills assigned</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if emp.available_days_count == 7 %}
+                                        <span style="font-size: 0.82rem; font-weight: 600; color: var(--success);">7 Days (Full)</span>
+                                    {% elif emp.available_days_count > 0 %}
+                                        <span style="font-size: 0.82rem; font-weight: 500;">{{ emp.available_days_count }} Days / Week</span>
+                                    {% else %}
+                                        <span style="font-size: 0.82rem; color: var(--text-muted);">Not configured</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if emp.is_active == 1 %}
+                                        <span class="status-badge" style="padding: 0.15rem 0.55rem; font-size: 0.75rem;">Active</span>
+                                    {% else %}
+                                        <span class="status-badge inactive" style="padding: 0.15rem 0.55rem; font-size: 0.75rem;">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    <div class="table-actions" style="justify-content: flex-end;">
+                                        <a href="{{ url_for('employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-outline" title="View Profile">
+                                            View
+                                        </a>
+                                        <a href="{{ url_for('employee_edit', emp_id=emp.id) }}" class="btn btn-sm btn-outline" title="Edit Employee">
+                                            Edit
+                                        </a>
+                                        <form action="{{ url_for('employee_toggle_status', emp_id=emp.id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm btn-outline" title="Toggle Active Status">
+                                                {{ 'Pause' if emp.is_active else 'Resume' }}
+                                            </button>
+                                        </form>
+                                        <form action="{{ url_for('employee_delete', emp_id=emp.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ emp.name }}? This will permanently remove their assignments and availability.');">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem 1rem;">
+                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1rem;">No employees registered yet.</p>
+                <a href="{{ url_for('employee_new') }}" class="btn btn-primary">Add Your First Employee</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

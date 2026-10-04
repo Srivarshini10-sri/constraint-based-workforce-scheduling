@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Task' if task else 'Add New Task' }} | Workforce Scheduler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'Edit Operational Task' if task else 'Define New Operational Task' }}</h1>
+        <p class="page-subtitle">Configure task timing windows, shift type (Morning, Afternoon, Night), required skills, and headcount requirements.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('tasks_list') }}" class="btn btn-secondary">
+            &larr; Back to Tasks
+        </a>
+    </div>
+</div>
+
+<form action="{{ url_for('task_edit', task_id=task.id) if task else url_for('task_new') }}" method="POST">
+    <section class="card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <span style="font-size: 1.3rem;">📋</span>
+                <div>
+                    <h2 class="card-title">Task Parameters & Scheduling Windows</h2>
+                    <p class="card-subtitle">These parameters define the CSP variable domains and hard constraints</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="task_code" class="form-label required">Task Code</label>
+                    <input 
+                        type="text" 
+                        id="task_code" 
+                        name="task_code" 
+                        class="form-control" 
+                        placeholder="e.g. TSK-101" 
+                        value="{{ task.task_code if task else default_code }}" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="title" class="form-label required">Task Title</label>
+                    <input 
+                        type="text" 
+                        id="title" 
+                        name="title" 
+                        class="form-control" 
+                        placeholder="e.g. Morning Floor Supervision" 
+                        value="{{ task.title if task else '' }}" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="shift_type" class="form-label required">Shift Category</label>
+                    <select id="shift_type" name="shift_type" class="form-control" required onchange="applyShiftTypeDefaults(this.value)">
+                        <option value="Morning" {% if task and task.shift_type == 'Morning' %}selected{% endif %}>🌅 Morning Shift (08:00 - 16:00)</option>
+                        <option value="Afternoon" {% if task and task.shift_type == 'Afternoon' %}selected{% endif %}>☀️ Afternoon Shift (16:00 - 00:00)</option>
+                        <option value="Night" {% if task and task.shift_type == 'Night' %}selected{% endif %}>🌙 Night Shift (00:00 - 08:00)</option>
+                        <option value="Flexible" {% if task and task.shift_type == 'Flexible' %}selected{% endif %}>⚙️ Custom / Flexible Shift</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="day_of_week" class="form-label required">Day of Week</label>
+                    <select id="day_of_week" name="day_of_week" class="form-control" required>
+                        <option value="0" {% if task and task.day_of_week == 0 %}selected{% endif %}>Monday</option>
+                        <option value="1" {% if task and task.day_of_week == 1 %}selected{% endif %}>Tuesday</option>
+                        <option value="2" {% if task and task.day_of_week == 2 %}selected{% endif %}>Wednesday</option>
+                        <option value="3" {% if task and task.day_of_week == 3 %}selected{% endif %}>Thursday</option>
+                        <option value="4" {% if task and task.day_of_week == 4 %}selected{% endif %}>Friday</option>
+                        <option value="5" {% if task and task.day_of_week == 5 %}selected{% endif %}>Saturday</option>
+                        <option value="6" {% if task and task.day_of_week == 6 %}selected{% endif %}>Sunday</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="start_time" class="form-label required">Start Time</label>
+                    <input 
+                        type="time" 
+                        id="start_time" 
+                        name="start_time" 
+                        class="form-control" 
+                        value="{{ task.start_time if task else '08:00' }}" 
+                        required 
+                        onchange="recalcDuration()"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="end_time" class="form-label required">End Time / Deadline</label>
+                    <input 
+                        type="time" 
+                        id="end_time" 
+                        name="end_time" 
+                        class="form-control" 
+                        value="{{ task.end_time if task else '16:00' }}" 
+                        required 
+                        onchange="recalcDuration()"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="duration_hours" class="form-label required">Duration (Hours)</label>
+                    <input 
+                        type="number" 
+                        id="duration_hours" 
+                        name="duration_hours" 
+                        class="form-control" 
+                        step="0.5" 
+                        min="0.5" 
+                        max="24" 
+                        value="{{ task.duration_hours if task else 8.0 }}" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="required_skill_id" class="form-label">Required Skill</label>
+                    <select id="required_skill_id" name="required_skill_id" class="form-control">
+                        <option value="">None (Any Available Worker)</option>
+                        {% for skill in skills %}
+                            <option value="{{ skill.id }}" {% if task and task.required_skill_id == skill.id %}selected{% endif %}>
+                                {{ skill.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-help">Only employees qualified with this skill can be assigned</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="min_staff" class="form-label required">Required Staff Count</label>
+                    <input 
+                        type="number" 
+                        id="min_staff" 
+                        name="min_staff" 
+                        class="form-control" 
+                        min="1" 
+                        max="10" 
+                        value="{{ task.min_staff if task else 1 }}" 
+                        required
+                    >
+                    <span class="form-help">Number of distinct workers needed concurrently</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority" class="form-label required">Scheduling Priority</label>
+                    <select id="priority" name="priority" class="form-control" required>
+                        <option value="1" {% if task and task.priority == 1 %}selected{% endif %}>1 - Normal Priority</option>
+                        <option value="2" {% if task and task.priority == 2 %}selected{% endif %}>2 - High Priority</option>
+                        <option value="3" {% if task and task.priority == 3 %}selected{% endif %}>3 - Critical / Mandatory</option>
+                    </select>
+                    <span class="form-help">Higher priority tasks are satisfied first during contention</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('tasks_list') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {{ 'Update Task' if task else 'Create Task' }}
+                </button>
+            </div>
+        </div>
+    </section>
+</form>
+
+<script>
+function applyShiftTypeDefaults(type) {
+    const s = document.getElementById('start_time');
+    const e = document.getElementById('end_time');
+    const d = document.getElementById('duration_hours');
+    if (type === 'Morning') {
+        s.value = '08:00'; e.value = '16:00'; d.value = 8.0;
+    } else if (type === 'Afternoon') {
+        s.value = '16:00'; e.value = '23:59'; d.value = 8.0;
+    } else if (type === 'Night') {
+        s.value = '00:00'; e.value = '08:00'; d.value = 8.0;
+    }
+}
+function recalcDuration() {
+    const s = document.getElementById('start_time').value;
+    const e = document.getElementById('end_time').value;
+    if (s && e) {
+        const sMin = parseInt(s.split(':')[0]) * 60 + parseInt(s.split(':')[1]);
+        let eMin = parseInt(e.split(':')[0]) * 60 + parseInt(e.split(':')[1]);
+        if (e === '23:59') eMin = 1440;
+        if (eMin > sMin) {
+            document.getElementById('duration_hours').value = ((eMin - sMin) / 60).toFixed(1);
+        }
+    }
+}
+</script>
+{% endblock %}

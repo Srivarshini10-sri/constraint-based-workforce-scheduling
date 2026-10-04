@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Entry & Presets | Workforce Scheduler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Bulk Entry & Workforce Presets</h1>
+        <p class="page-subtitle">Quickly populate 5, 10, or more employees and operational tasks to test the CSP scheduling engine with various constraints and conflicts.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('scheduler_dashboard') }}" class="btn btn-primary">
+            ⚡ Open CSP Scheduler &rarr;
+        </a>
+    </div>
+</div>
+
+<!-- 1-Click Test Scenarios Card -->
+<section class="card" style="border: 2px solid #bfdbfe;">
+    <div class="card-header" style="background: var(--primary-light);">
+        <div class="card-header-left">
+            <span style="font-size: 1.4rem;">🚀</span>
+            <div>
+                <h2 class="card-title" style="color: var(--primary);">Instant Test Bench Presets (5 & 10 Employees)</h2>
+                <p class="card-subtitle">Load pre-configured test scenarios into SQLite with a single click</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <!-- Preset 1: 5 Employees -->
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <span class="status-badge" style="margin-bottom: 0.5rem; font-size: 0.75rem;">Preset A</span>
+                    <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.35rem;">5-Employee Diverse Team</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                        Loads 5 staff members with diverse skills (Supervision, Inventory, Tech, Support), varying contract caps (30h&ndash;40h), and 7-day availability windows.
+                    </p>
+                </div>
+                <form action="{{ url_for('load_preset', preset_type='5_employees') }}" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline" style="width: 100%;">
+                        Load 5 Employees &rarr;
+                    </button>
+                </form>
+            </div>
+
+            <!-- Preset 2: 10 Employees -->
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <span class="status-badge" style="margin-bottom: 0.5rem; font-size: 0.75rem; background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">Preset B</span>
+                    <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.35rem;">10-Employee Operations Team</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                        Loads 10 staff members for large-scale operations across Morning, Afternoon, and Night shifts with fairness optimization benchmarking.
+                    </p>
+                </div>
+                <form action="{{ url_for('load_preset', preset_type='10_employees') }}" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline" style="width: 100%;">
+                        Load 10 Employees &rarr;
+                    </button>
+                </form>
+            </div>
+
+            <!-- Preset 3: Standard Operational Tasks -->
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <span class="status-badge" style="margin-bottom: 0.5rem; font-size: 0.75rem; background: #fef3c7; color: #b45309; border-color: #fde68a;">Preset C</span>
+                    <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.35rem;">Standard Weekly Tasks (15 Shifts)</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                        Populates 15 operational tasks across Monday&ndash;Friday divided into Morning (08:00&ndash;16:00), Afternoon (16:00&ndash;00:00), and Night (00:00&ndash;08:00) shifts.
+                    </p>
+                </div>
+                <form action="{{ url_for('load_preset', preset_type='standard_tasks') }}" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline" style="width: 100%;">
+                        Load 15 Tasks &rarr;
+                    </button>
+                </form>
+            </div>
+
+            <!-- Preset 4: Conflict Stress Test -->
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <span class="status-badge" style="margin-bottom: 0.5rem; font-size: 0.75rem; background: var(--danger-bg); color: var(--danger); border-color: #fecaca;">Preset D</span>
+                    <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.35rem;">Conflict Stress-Test Tasks</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                        Loads tasks intentionally engineered with missing skills, overlapping hours, tight rest periods, and hour cap limits to test transparent conflict explanations.
+                    </p>
+                </div>
+                <form action="{{ url_for('load_preset', preset_type='conflict_tasks') }}" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline" style="width: 100%;">
+                        Load Stress-Test Tasks &rarr;
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Bulk Employee Entry Form -->
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-left">
+            <span style="font-size: 1.3rem;">👥</span>
+            <div>
+                <h2 class="card-title">Bulk Employee Entry (Add 5 or More)</h2>
+                <p class="card-subtitle">Fill rows below to insert multiple workforce members simultaneously</p>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" onclick="addEmployeeRow()">
+            + Add Another Row
+        </button>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('bulk_save_employees') }}" method="POST">
+            <div class="table-responsive">
+                <table class="data-table" id="bulkEmployeeTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 110px;">Code</th>
+                            <th>Full Name</th>
+                            <th>Email Address</th>
+                            <th style="width: 160px;">Role</th>
+                            <th style="width: 110px;">Max Hours</th>
+                            <th style="width: 110px;">Target Hours</th>
+                            <th>Primary Skill</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeRowContainer">
+                        {% for i in range(5) %}
+                        <tr>
+                            <td>
+                                <input type="text" name="emp_code_{{ i }}" class="form-control" placeholder="EMP-{{ 200 + i }}" style="font-size: 0.82rem;">
+                            </td>
+                            <td>
+                                <input type="text" name="emp_name_{{ i }}" class="form-control" placeholder="Employee Name {{ i + 1 }}">
+                            </td>
+                            <td>
+                                <input type="email" name="emp_email_{{ i }}" class="form-control" placeholder="user{{ i + 1 }}@workforce.local">
+                            </td>
+                            <td>
+                                <select name="emp_role_{{ i }}" class="form-control" style="font-size: 0.85rem;">
+                                    <option value="Staff Associate">Staff Associate</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                    <option value="Specialist">Specialist</option>
+                                    <option value="Manager">Manager</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" name="emp_max_{{ i }}" class="form-control" value="40" min="1" max="80">
+                            </td>
+                            <td>
+                                <input type="number" name="emp_target_{{ i }}" class="form-control" value="35" min="1" max="80">
+                            </td>
+                            <td>
+                                <select name="emp_skill_{{ i }}" class="form-control" style="font-size: 0.85rem;">
+                                    <option value="">None</option>
+                                    {% for s in skills %}
+                                        <option value="{{ s.id }}">{{ s.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save All Entered Employees</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- Bulk Task Entry Form -->
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-left">
+            <span style="font-size: 1.3rem;">📋</span>
+            <div>
+                <h2 class="card-title">Bulk Task / Shift Demand Entry</h2>
+                <p class="card-subtitle">Quickly enter operational shifts across days and shift categories</p>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" onclick="addTaskRow()">
+            + Add Another Row
+        </button>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('bulk_save_tasks') }}" method="POST">
+            <div class="table-responsive">
+                <table class="data-table" id="bulkTaskTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Task Code</th>
+                            <th>Task Title</th>
+                            <th style="width: 130px;">Shift Type</th>
+                            <th style="width: 110px;">Day</th>
+                            <th style="width: 110px;">Start</th>
+                            <th style="width: 110px;">End</th>
+                            <th style="width: 80px;">Hours</th>
+                            <th>Required Skill</th>
+                            <th style="width: 80px;">Staff</th>
+                            <th style="width: 90px;">Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskRowContainer">
+                        {% for i in range(5) %}
+                        <tr>
+                            <td>
+                                <input type="text" name="task_code_{{ i }}" class="form-control" placeholder="TSK-{{ 300 + i }}" style="font-size: 0.82rem;">
+                            </td>
+                            <td>
+                                <input type="text" name="task_title_{{ i }}" class="form-control" placeholder="Task Name {{ i + 1 }}">
+                            </td>
+                            <td>
+                                <select name="task_type_{{ i }}" class="form-control" style="font-size: 0.82rem;">
+                                    <option value="Morning">Morning</option>
+                                    <option value="Afternoon">Afternoon</option>
+                                    <option value="Night">Night</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select name="task_day_{{ i }}" class="form-control" style="font-size: 0.82rem;">
+                                    <option value="0">Mon</option>
+                                    <option value="1">Tue</option>
+                                    <option value="2">Wed</option>
+                                    <option value="3">Thu</option>
+                                    <option value="4">Fri</option>
+                                    <option value="5">Sat</option>
+                                    <option value="6">Sun</option>
+                                </select>
+                            </td>
+                            <td><input type="time" name="task_start_{{ i }}" class="form-control" value="08:00"></td>
+                            <td><input type="time" name="task_end_{{ i }}" class="form-control" value="16:00"></td>
+                            <td><input type="number" name="task_dur_{{ i }}" class="form-control" value="8" step="0.5"></td>
+                            <td>
+                                <select name="task_skill_{{ i }}" class="form-control" style="font-size: 0.82rem;">
+                                    <option value="">None</option>
+                                    {% for s in skills %}
+                                        <option value="{{ s.id }}">{{ s.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td><input type="number" name="task_staff_{{ i }}" class="form-control" value="1" min="1" max="5"></td>
+                            <td>
+                                <select name="task_prio_{{ i }}" class="form-control" style="font-size: 0.82rem;">
+                                    <option value="1">P1</option>
+                                    <option value="2">P2</option>
+                                    <option value="3">P3</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save All Entered Tasks</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<script>
+let empRowCount = 5;
+function addEmployeeRow() {
+    const container = document.getElementById('employeeRowContainer');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" name="emp_code_${empRowCount}" class="form-control" placeholder="EMP-${200 + empRowCount}" style="font-size: 0.82rem;"></td>
+        <td><input type="text" name="emp_name_${empRowCount}" class="form-control" placeholder="Employee Name ${empRowCount + 1}"></td>
+        <td><input type="email" name="emp_email_${empRowCount}" class="form-control" placeholder="user${empRowCount + 1}@workforce.local"></td>
+        <td>
+            <select name="emp_role_${empRowCount}" class="form-control" style="font-size: 0.85rem;">
+                <option value="Staff Associate">Staff Associate</option>
+                <option value="Supervisor">Supervisor</option>
+                <option value="Specialist">Specialist</option>
+            </select>
+        </td>
+        <td><input type="number" name="emp_max_${empRowCount}" class="form-control" value="40" min="1" max="80"></td>
+        <td><input type="number" name="emp_target_${empRowCount}" class="form-control" value="35" min="1" max="80"></td>
+        <td>
+            <select name="emp_skill_${empRowCount}" class="form-control" style="font-size: 0.85rem;">
+                <option value="">None</option>
+                {% for s in skills %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+    `;
+    container.appendChild(tr);
+    empRowCount++;
+}
+
+let taskRowCount = 5;
+function addTaskRow() {
+    const container = document.getElementById('taskRowContainer');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" name="task_code_${taskRowCount}" class="form-control" placeholder="TSK-${300 + taskRowCount}" style="font-size: 0.82rem;"></td>
+        <td><input type="text" name="task_title_${taskRowCount}" class="form-control" placeholder="Task Name ${taskRowCount + 1}"></td>
+        <td>
+            <select name="task_type_${taskRowCount}" class="form-control" style="font-size: 0.82rem;">
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Night">Night</option>
+            </select>
+        </td>
+        <td>
+            <select name="task_day_${taskRowCount}" class="form-control" style="font-size: 0.82rem;">
+                <option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option>
+                <option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option>
+            </select>
+        </td>
+        <td><input type="time" name="task_start_${taskRowCount}" class="form-control" value="08:00"></td>
+        <td><input type="time" name="task_end_${taskRowCount}" class="form-control" value="16:00"></td>
+        <td><input type="number" name="task_dur_${taskRowCount}" class="form-control" value="8" step="0.5"></td>
+        <td>
+            <select name="task_skill_${taskRowCount}" class="form-control" style="font-size: 0.82rem;">
+                <option value="">None</option>
+                {% for s in skills %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td><input type="number" name="task_staff_${taskRowCount}" class="form-control" value="1" min="1" max="5"></td>
+        <td>
+            <select name="task_prio_${taskRowCount}" class="form-control" style="font-size: 0.82rem;">
+                <option value="1">P1</option><option value="2">P2</option><option value="3">P3</option>
+            </select>
+        </td>
+    `;
+    container.appendChild(tr);
+    taskRowCount++;
+}
+</script>
+{% endblock %}

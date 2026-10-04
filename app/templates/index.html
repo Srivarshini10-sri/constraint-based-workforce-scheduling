@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Workforce Scheduling System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-titles">
+        <h1 class="page-title">Workforce Scheduling & Workload Optimization</h1>
+        <p class="page-subtitle">Constraint-Based Intelligent Workforce Scheduling and Fair Workload Optimization System</p>
+    </div>
+    <div class="header-status">
+        {% if db_info.status == 'connected' %}
+            <span class="status-badge status-online">
+                <span class="pulse-dot"></span> SQLite Connected (v{{ db_info.sqlite_version }})
+            </span>
+        {% else %}
+            <span class="status-badge status-offline">
+                <span class="pulse-dot red"></span> DB Connection Failed
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Database Connectivity & Environment Status Card -->
+<section class="card status-card">
+    <div class="card-header">
+        <div class="card-header-icon">🗄️</div>
+        <div>
+            <h2 class="card-title">Database Connectivity & Storage Status</h2>
+            <p class="card-subtitle">SQLite embedded relational database engine</p>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="grid-stats">
+            <div class="stat-box">
+                <span class="stat-label">Database Engine</span>
+                <span class="stat-value">SQLite 3</span>
+                <span class="stat-meta">Version {{ db_info.sqlite_version }}</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Active Tables</span>
+                <span class="stat-value">{{ db_info.table_count }}</span>
+                <span class="stat-meta">Schema verified</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Registered Employees</span>
+                <span class="stat-value">{{ db_info.stats.employees if db_info.stats else 0 }}</span>
+                <span class="stat-meta">In database</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Shift Definitions</span>
+                <span class="stat-value">{{ db_info.stats.shifts if db_info.stats else 0 }}</span>
+                <span class="stat-meta">Template slots</span>
+            </div>
+        </div>
+
+        <div class="db-details-panel">
+            <div class="detail-row">
+                <span class="detail-name">Database File Path:</span>
+                <code class="detail-code">{{ db_info.database_path }}</code>
+            </div>
+            <div class="detail-row">
+                <span class="detail-name">Schema Tables:</span>
+                <div class="table-tag-list">
+                    {% for tbl in db_info.tables %}
+                        <span class="tag-table">{{ tbl }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if db_info.stats and db_info.stats.employees == 0 %}
+        <div class="seed-action-banner">
+            <div class="banner-text">
+                <strong>Empty Database Initialized:</strong> You can load a set of demo employees and skills to verify database read/write operations immediately.
+            </div>
+            <form action="{{ url_for('main.seed_demo_data') }}" method="POST">
+                <button type="submit" class="btn btn-primary">Seed Demo Workforce Data</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Active Constraints Configuration Card -->
+<section class="card">
+    <div class="card-header">
+        <div class="card-header-icon">⚖️</div>
+        <div>
+            <h2 class="card-title">Configured Scheduling Constraints</h2>
+            <p class="card-subtitle">Stored and managed in SQLite <code>system_settings</code></p>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="constraints-grid">
+            <div class="constraint-item">
+                <div class="constraint-icon">⏱️</div>
+                <div class="constraint-details">
+                    <h4>Minimum Rest Duration</h4>
+                    <p class="constraint-val">
+                        {{ settings.min_rest_hours_between_shifts.value if settings.min_rest_hours_between_shifts else '11.0' }} Hours
+                    </p>
+                    <p class="constraint-desc">Mandatory rest window required between consecutive shifts</p>
+                </div>
+            </div>
+
+            <div class="constraint-item">
+                <div class="constraint-icon">📅</div>
+                <div class="constraint-details">
+                    <h4>Max Weekly Working Hours</h4>
+                    <p class="constraint-val">
+                        {{ settings.default_max_weekly_hours.value if settings.default_max_weekly_hours else '40.0' }} Hours
+                    </p>
+                    <p class="constraint-desc">Maximum allowable working hours per employee per week</p>
+                </div>
+            </div>
+
+            <div class="constraint-item">
+                <div class="constraint-icon">📆</div>
+                <div class="constraint-details">
+                    <h4>Max Consecutive Work Days</h4>
+                    <p class="constraint-val">
+                        {{ settings.max_consecutive_days.value if settings.max_consecutive_days else '6' }} Days
+                    </p>
+                    <p class="constraint-desc">Prevents employee burnout by enforcing weekly rest days</p>
+                </div>
+            </div>
+
+            <div class="constraint-item">
+                <div class="constraint-icon">🎯</div>
+                <div class="constraint-details">
+                    <h4>Fair Workload Optimization</h4>
+                    <p class="constraint-val">
+                        <span class="badge-active">Active</span>
+                    </p>
+                    <p class="constraint-desc">Minimizes workload variance across all qualified employees</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- System Capability Roadmap -->
+<section class="modules-overview">
+    <h3 class="section-title">System Architecture Modules</h3>
+    <div class="modules-grid">
+        <div class="module-card">
+            <div class="module-status badge-ready">Schema Ready</div>
+            <h4>Employee Management</h4>
+            <p>Add, edit, view, and delete employee profiles with contract targets, roles, and contacts.</p>
+        </div>
+
+        <div class="module-card">
+            <div class="module-status badge-ready">Schema Ready</div>
+            <h4>Skills & Availability</h4>
+            <p>Define weekly recurring time-availability windows and match employees to required shift skills.</p>
+        </div>
+
+        <div class="module-card">
+            <div class="module-status badge-ready">Schema Ready</div>
+            <h4>Intelligent Scheduler</h4>
+            <p>Constraint-satisfaction engine resolving overlap prevention, rest periods, and hour caps.</p>
+        </div>
+
+        <div class="module-card">
+            <div class="module-status badge-ready">Schema Ready</div>
+            <h4>Fairness Optimizer</h4>
+            <p>Balanced hour distribution preventing under-allocation or overload among qualified workers.</p>
+        </div>
+
+        <div class="module-card">
+            <div class="module-status badge-ready">Schema Ready</div>
+            <h4>Unfilled Shift Explainer</h4>
+            <p>Transparent root-cause diagnosis when shifts cannot be satisfied within hard constraints.</p>
+        </div>
+
+        <div class="module-card">
+            <div class="module-status badge-ready">Schema Ready</div>
+            <h4>Weekly Roster & CSV Export</h4>
+            <p>Interactive weekly roster matrix with single-click CSV export for management.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
